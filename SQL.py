@@ -30,6 +30,18 @@ bookmark_file = "bookmark.txt"
 # Batch size for database insertions
 BATCH_SIZE = 1000
 
+# Function to normalize fields by removing extra spaces
+def normalize_field(field):
+    if field:
+        return re.sub(r'\s+', ' ', field).strip()
+    return field
+
+# Function to capture only the part after '\\' in user_id if it exists, otherwise capture the whole user_id
+def process_user_id(user_id):
+    if user_id and '\\' in user_id:
+        return user_id.split('\\')[-1].strip()
+    return user_id
+
 # Initialize SQL tables
 def initialize_sql_tables():
     """Create the sigma_alerts and dbscan_outlier tables in the database if they don't exist."""
@@ -173,15 +185,15 @@ def process_log_file(file_path, last_processed_time):
                 title = title.group(1).strip() if title else None
                 tags = tags.group(1).replace('"', "").strip() if tags else None
                 description = description.group(1).strip() if description else None
-                computer_name = computer_name.group(1).strip() if computer_name else None
-                user_id = user_id.group(1).strip() if user_id else None
+                computer_name = normalize_field(computer_name.group(1).strip()) if computer_name else None
+                user_id = process_user_id(normalize_field(user_id.group(1).strip())) if user_id else None
                 event_id = event_id.group(1).strip() if event_id else None
                 provider_name = provider_name.group(1).strip() if provider_name else None
                 ip_address = ip_address.group(1).strip() if ip_address else None
                 task = task.group(1).strip() if task else None
                 rule_level = rule_level.group(1).strip() if rule_level else None
-                target_user_name = target_user_name.group(1).strip() if target_user_name else None
-                target_domain_name = target_domain_name.group(1).strip() if target_domain_name else None
+                target_user_name = normalize_field(target_user_name.group(1).strip()) if target_user_name else None
+                target_domain_name = normalize_field(target_domain_name.group(1).strip()) if target_domain_name else None
                 ruleid = ruleid.group(1).strip() if ruleid else None
 
                 # Convert SystemTime to MySQL-compatible format

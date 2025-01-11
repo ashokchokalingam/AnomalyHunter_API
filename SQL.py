@@ -95,8 +95,8 @@ def initialize_sql_tables():
             );
             """
             cursor.execute(create_dbscan_outlier_query)
-
             connection.commit()
+
             logger.info("Initialized SQL tables 'sigma_alerts' and 'dbscan_outlier'.")
     except Error as e:
         logger.error(f"Error initializing SQL tables: {e}")
@@ -243,15 +243,26 @@ def insert_data_to_sql(data, table, cluster_value):
             with connection.cursor() as cursor:
                 insert_query = f"""
                 INSERT INTO {table} (title, tags, description, system_time, computer_name, user_id, event_id, provider_name, dbscan_cluster, ip_address, task, rule_level, target_user_name, target_domain_name, ruleid, raw)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                VALUES (%s, %s, %s, %s, REPLACE(%s, ' ', ''), REPLACE(%s, ' ', ''), %s, %s, %s, %s, %s, %s, REPLACE(%s, ' ', ''), %s, %s, %s);
                 """
                 # Batch insert in chunks
                 for i in range(0, len(data), BATCH_SIZE):
                     batch = data[i:i + BATCH_SIZE]
-                    data_with_cluster = [(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7], cluster_value, row[8], row[9], row[10], row[11], row[12], row[13], row[14]) for row in batch]
+                    data_with_cluster = [
+                        (
+                            row[0], row[1], row[2], row[3],
+                            row[4],  # computer_name
+                            row[5],  # user_id
+                            row[6], row[7], cluster_value,
+                            row[8], row[9], row[10],
+                            row[11],  # target_user_name
+                            row[12], row[13], row[14]
+                        ) for row in batch
+                    ]
                     cursor.executemany(insert_query, data_with_cluster)
                     connection.commit()
                 logger.info(f"Inserted {len(data)} rows into '{table}' with cluster value {cluster_value}.")
+
         except Error as e:
             logger.error(f"Error inserting data into {table}: {e}")
         finally:
